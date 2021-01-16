@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2021 The toml-idr developers
+#
+# SPDX-License-Identifier: CC0-1.0
+
+build/*
+tests/build/*

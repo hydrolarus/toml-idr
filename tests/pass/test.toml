@@ -1,0 +1,20 @@
+# Description of the package
+[package]
+name = "test-app"
+license = "MPL"
+
+packages = ["contrib"]
+
+[bin]
+name = "test-app"
+module = "TestApp.Main"
+
+
+# Write the dependencies here
+
+[dependencies]
+test = { git = "https://github.com/tiatomee/test-idr", tag = "0.1.0" }
+
+[dependencies.toml]
+git = "https://github.com/tiatomee/toml-idr"
+branch = "main" # switch to a semver tag

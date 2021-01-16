@@ -1,0 +1,17 @@
+-- SPDX-FileCopyrightText: 2021 The toml-idr developers
+--
+-- SPDX-License-Identifier: CC0-1.0
+
+package toml
+
+depends = contrib
+
+modules =
+    Language.TOML.ConcreteSyntax,
+    Language.TOML.Parser,
+    Language.TOML.Lexer,
+    Language.TOML.Tokens,
+    Language.TOML.Value,
+    Language.TOML
+
+sourcedir = "src"

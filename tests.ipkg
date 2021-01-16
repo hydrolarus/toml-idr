@@ -1,0 +1,19 @@
+-- SPDX-FileCopyrightText: 2021 The toml-idr developers
+--
+-- SPDX-License-Identifier: CC0-1.0
+
+package toml_tests
+
+depends = toml, contrib, test
+
+modules =
+    Files,
+    Lexer,
+    Parser,
+    Tests
+
+executable = "tests"
+
+sourcedir = "tests"
+
+main = Tests
