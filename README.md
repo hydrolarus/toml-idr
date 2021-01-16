@@ -14,6 +14,9 @@ Supported values:
 - [x] integers (without `_` separators **TODO**)
 - [x] floats (without `_` separators **TODO**)
 - [x] strings (only `\"` escape is supported for now **TODO**)
+- [ ] multi-line strings
+- [ ] literal strings
+- [ ] multi-line literal strings
 - [x] booleans
 - [x] arrays
 - [x] inline tables
@@ -23,6 +26,8 @@ Supported values:
 - [ ] Local Time
 
 Arrays of tables (`[[thing]]`) are currently not supported. **Work in progress**
+
+Since literal strings and not supported yet, they are also not supported in keys. **Work in progress**
 
 ## Installation
 
