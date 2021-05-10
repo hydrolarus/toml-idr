@@ -4,8 +4,8 @@
 
 module Tests
 
-import Test
-import Test.Runner
+import Tester
+import Tester.Runner
 
 import Parser
 import Lexer

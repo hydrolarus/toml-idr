@@ -54,7 +54,7 @@ function can be used.
 ## Development
 
 To run the tests, run `make tests`. The tests need the
-[`test` package](https://github.com/tiatomee/test-idr) to be installed
+[`tester` package](https://github.com/tiatomee/tester-idr) to be installed
 
 The command `make clear` will clean the build directory.
 

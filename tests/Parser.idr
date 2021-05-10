@@ -4,7 +4,7 @@
 
 module Parser
 
-import Test
+import Tester
 import Control.ANSI
 
 import Text.Lexer

@@ -20,7 +20,7 @@ punct p = match $ TTPunct p
 private
 maybeNewlines : Grammar TOMLToken False ()
 maybeNewlines = do
-    many (punct NewLine)
+    _ <- many (punct NewLine)
     pure ()
 
 private

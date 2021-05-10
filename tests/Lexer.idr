@@ -6,7 +6,7 @@ module Lexer
 
 import Text.Lexer
 
-import Test
+import Tester
 
 import Language.TOML.Lexer
 import Language.TOML.Tokens

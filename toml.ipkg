@@ -3,6 +3,7 @@
 -- SPDX-License-Identifier: CC0-1.0
 
 package toml
+version = 0.1.0
 
 depends = contrib
 

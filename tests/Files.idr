@@ -4,7 +4,7 @@
 
 module Files
 
-import Test
+import Tester
 
 import Language.TOML
 
