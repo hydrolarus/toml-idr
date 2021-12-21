@@ -58,14 +58,8 @@ tomlTokenMap = toTokenMap $
     ]
 
 export
-lexTOMLTokData : String -> Maybe (List (TokenData TOMLToken))
-lexTOMLTokData str =
+lexTOML : String -> Maybe (List (WithBounds TOMLToken))
+lexTOML str =
     case lex tomlTokenMap str of
         (tokens, (_, _, "")) => Just tokens
         _ => Nothing
-
-export
-lexTOML : String -> Maybe (List (TOMLToken))
-lexTOML str = do
-    toks <- lexTOMLTokData str
-    pure $ map (.tok) toks

@@ -6,7 +6,7 @@ module Language.TOML.Value
 
 import public Data.SortedMap
 import Data.List
-import Data.Strings
+import Data.String
 
 public export
 Key : Type
@@ -43,9 +43,11 @@ Eq Value where
     (VInteger x) == (VInteger y) = x == y
     (VFloat x) == (VFloat y) = x == y
     (VBoolean x) == (VBoolean y) = x == y
-    (VArray xs) == (VArray ys) = xs == ys
-    (VTable x) == (VTable y) = SortedMap.toList x == SortedMap.toList y
+    (VArray xs) == (VArray ys) = assert_total $ xs == ys
+    (VTable x) == (VTable y) = assert_total $ SortedMap.toList x == SortedMap.toList y
     _ == _ = False
+
+    a /= b = not $ (assert_total (==)) a b
 
 
 public export
@@ -56,12 +58,12 @@ Show Value where
     show (VBoolean True) = "true"
     show (VBoolean False) = "false"
     show (VArray xs) = "["
-        ++ fastConcat (intersperse ", " $ map show xs)
+        ++ fastConcat (intersperse ", " $ map (assert_total show) xs)
         ++ "]"
     show (VTable x) =
         let kvs = the (List (Key, Value)) $ toList x in
         "{"
-        ++ fastConcat (intersperse ", " $ flip map kvs \(k, v) =>
-                            show k ++ " = " ++ show v
+        ++ fastConcat (intersperse ", " . flip map kvs $ \(k, v) =>
+                            show k ++ " = " ++ assert_total show v
                         )
         ++ "}"

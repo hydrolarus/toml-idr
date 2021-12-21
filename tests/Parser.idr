@@ -21,7 +21,7 @@ parseToItems src = do
     Just toks <- pure $ L.lexTOML src
         | Nothing => throw "lexing failed"
     Right items <- pure $ P.parseItems toks
-        | Left err => throw (show (colored Red "parsing failed: ") ++ err)
+        | Left err => throw (show (colored Red "parsing failed: ") ++ show err)
     pure items
 
 

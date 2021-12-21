@@ -9,6 +9,8 @@ import Data.List
 import Data.List1
 import Data.SortedMap
 
+import Text.Bounded
+import Text.Token
 import Language.TOML.Lexer
 import Language.TOML.Parser
 import public Language.TOML.Value
@@ -30,10 +32,10 @@ sections xs = loop SGlobal xs
         loop sec ((ITableHeader header) :: xs) = loop (STable header) xs
         loop sec ((ITableArray header) :: xs) = loop (STableArray header) xs
         loop sec xs =
-            let (kvs', rest) = flip break xs \x => case x of
+            let (kvs', rest) = flip break xs $ \x => case x of
                                         IKeyValue k v => False
                                         _ => True
-                kvs = flip mapMaybe kvs' \x => case x of
+                kvs = flip mapMaybe kvs' $ \x => case x of
                                         IKeyValue k v => Just (k, v)
                                         _ => Nothing
                 
@@ -43,7 +45,7 @@ sections xs = loop SGlobal xs
 public export
 data Error = ErrDottedIsNotATable Key Value
            | LexerError
-           | ParseError String
+           | ParseError (List String)
            | Unimplemented
 
 
@@ -51,7 +53,7 @@ public export
 Show Error where
     show (ErrDottedIsNotATable x y) = "Dotted key part `" ++ show x ++ "`is not a table"
     show LexerError = "Lexer error"
-    show (ParseError x) = "Parse error: " ++ x
+    show (ParseError x) = "Parse error: " ++ show x
     show Unimplemented = "Unimplemented feature"
 
 
@@ -121,7 +123,7 @@ extendFile file (((STableArray x), kvs) :: rest) = Left Unimplemented
 export
 parseTOML : (src : String) -> Either Error Table
 parseTOML src = do
-    Just toks <- pure $ lexTOML src
+    let Just toks = lexTOML src
         | Nothing => Left LexerError
 
     items <- bimap ParseError id (parseItems toks)

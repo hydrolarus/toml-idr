@@ -4,6 +4,7 @@
 
 module Language.TOML.Tokens
 
+import Text.Bounded
 import Text.Token
 
 %default total
@@ -89,8 +90,7 @@ TokenKind TOMLTokenKind where
     tokValue TTIgnored _ = ()
 
 
-
 export
-ignored : TOMLToken -> Bool
-ignored (Tok TTIgnored _) = True
+ignored : WithBounds TOMLToken -> Bool
+ignored (MkBounded (Tok TTIgnored _) _ _) = True
 ignored _ = False

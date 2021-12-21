@@ -4,7 +4,7 @@
 
 module Language.TOML.ConcreteSyntax
 
-import Data.Strings
+import Data.String
 import Data.List
 import Data.List1
 
@@ -50,10 +50,10 @@ Show CValue where
     show (CVFloat x) = show x
     show (CVBoolean x) = show x
     show (CVArray xs) = "["
-        ++ fastConcat (intersperse ", " $ map show xs)
+        ++ fastConcat (intersperse ", " $ map (assert_total show) xs)
         ++ "]"
     show (CVInlineTable xs) = "{"
-        ++ fastConcat (intersperse ", " $ map (\(k, v) => show k ++ " = " ++ show v) xs)
+        ++ fastConcat (intersperse ", " $ map (\(k, v) => show k ++ " = " ++ assert_total show v) xs)
         ++ "}"
 
 public export

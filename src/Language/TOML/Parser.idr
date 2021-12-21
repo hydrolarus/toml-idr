@@ -14,21 +14,21 @@ import Data.List
 import Data.List1
 
 private
-punct : Punctuation -> Grammar TOMLToken True ()
+punct : Punctuation -> Grammar state TOMLToken True ()
 punct p = match $ TTPunct p
 
 private
-maybeNewlines : Grammar TOMLToken False ()
+maybeNewlines : Grammar state TOMLToken False ()
 maybeNewlines = do
     _ <- many (punct NewLine)
     pure ()
 
 private
-newlines : Grammar TOMLToken False ()
+newlines : Grammar state TOMLToken False ()
 newlines = (some (punct NewLine) >>= \_ => pure ()) <|> eof
 
 private
-allowNewlines : (p : Grammar TOMLToken True a) -> Grammar TOMLToken True a
+allowNewlines : (p : Grammar state TOMLToken True a) -> Grammar state TOMLToken True a
 allowNewlines p = maybeNewlines *> p <* maybeNewlines
 
 
@@ -44,27 +44,27 @@ unescape ('"'::rest) = loop rest
 unescape _ = []
 
 private
-string : Grammar TOMLToken True CValue
+string : Grammar state TOMLToken True CValue
 string = map (CVString . pack . unescape . unpack) $ match TTString
 
 private
-boolean : Grammar TOMLToken True CValue
+boolean : Grammar state TOMLToken True CValue
 boolean = map CVBoolean $ match TTBoolean
 
 private
-integer : Grammar TOMLToken True CValue
+integer : Grammar state TOMLToken True CValue
 integer = map CVInteger $ match TTInt
 
 private
-float : Grammar TOMLToken True CValue
+float : Grammar state TOMLToken True CValue
 float = map CVFloat $ match TTFloat
 
 private
-bare : Grammar TOMLToken True String
+bare : Grammar state TOMLToken True String
 bare = match TTBare
 
 private
-key : Grammar TOMLToken True CKey
+key : Grammar state TOMLToken True CKey
 key = do
         first <- keyAtom
         rest <- many (punct Dot *> keyAtom)
@@ -72,13 +72,13 @@ key = do
             [] => pure $ CKAtom first
             rest => pure $ CKDotted (first:::rest)
     where
-        keyAtom : Grammar TOMLToken True CKeyAtom
+        keyAtom : Grammar state TOMLToken True CKeyAtom
         keyAtom = map CKBare bare
               <|> (map CKQuoted $ match TTString)
 
 mutual
     private
-    value : Grammar TOMLToken True CValue
+    value : Grammar state TOMLToken True CValue
     value = string
         <|> boolean
         <|> integer
@@ -87,7 +87,7 @@ mutual
         <|> inlineTable
     
     private
-    array : Grammar TOMLToken True CValue
+    array : Grammar state TOMLToken True CValue
     array = do
         punct (Square Open)
         commit
@@ -96,7 +96,7 @@ mutual
         pure $ CVArray vals
     
     private
-    inlineTable : Grammar TOMLToken True CValue
+    inlineTable : Grammar state TOMLToken True CValue
     inlineTable = do
         punct (Curly Open)
         commit
@@ -110,7 +110,7 @@ mutual
         pure $ CVInlineTable vals
 
 private
-keyValue : Grammar TOMLToken True Item
+keyValue : Grammar state TOMLToken True Item
 keyValue = do
     k <- key
     punct Equal
@@ -119,7 +119,7 @@ keyValue = do
     pure $ IKeyValue k v
 
 private
-tableHeader : Grammar TOMLToken True Item
+tableHeader : Grammar state TOMLToken True Item
 tableHeader = do
     punct (Square Open)
     k <- key
@@ -129,7 +129,7 @@ tableHeader = do
     pure $ ITableHeader k
 
 private
-tableArrayHeader : Grammar TOMLToken True Item
+tableArrayHeader : Grammar state TOMLToken True Item
 tableArrayHeader = do
     punct (Square Open)
     punct (Square Open)
@@ -141,13 +141,13 @@ tableArrayHeader = do
     pure $ ITableArray k
 
 private
-item : Grammar TOMLToken True Item
+item : Grammar state TOMLToken True Item
 item = keyValue
    <|> tableHeader
    <|> tableArrayHeader
 
 private
-items : Grammar TOMLToken False (List Item)
+items : Grammar state TOMLToken False (List Item)
 items = do
     maybeNewlines 
     is <- many item
@@ -156,8 +156,12 @@ items = do
     pure is
 
 export
-parseItems : List TOMLToken -> Either String (List Item)
+parseItems : List (WithBounds TOMLToken) -> Either (List String) (List Item)
 parseItems toks = case parse items $ filter (not . ignored) toks of
     Right (its, []) => Right its
-    Right _ => Left "unconsumed input"
-    Left (Error msg _) => Left msg
+    Right _ => Left ["unconsumed input"]
+    Left errs => Left . flip map (forget errs) $ \(Error msg bounds) =>
+        case bounds of
+            Just bounds =>
+                "\{show bounds.startLine}:\{show bounds.startCol}--\{show bounds.endLine}:\{show bounds.endCol}: \{msg}"
+            Nothing => msg
