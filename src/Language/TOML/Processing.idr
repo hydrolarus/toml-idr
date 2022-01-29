@@ -17,10 +17,17 @@ mutual
         | TBoolean
         | TArray ValueTy
         | TTable TableTy
-    
+
+    public export
+    record FieldTy where
+        constructor MkFieldTy
+        name : String
+        optional : Bool
+        ty : ValueTy
+
     public export
     TableTy : Type
-    TableTy = List (String, ValueTy)
+    TableTy = List FieldTy
 
 
 mutual
@@ -34,8 +41,12 @@ mutual
     ValueOf (TTable x) = TableOf x
 
     public export
+    FieldOf : FieldTy -> Type
+    FieldOf x = (if x.optional then Maybe else id) (ValueOf x.ty)
+
+    public export
     TableOf : TableTy -> Type
-    TableOf = All (ValueOf . snd)
+    TableOf = All FieldOf
 
 
 mutual
@@ -58,12 +69,17 @@ mutual
     processTable [] x with (keys x)
       _ | [] = Right []
       _ | ks = Left $ UnexpectedFields ks
-    processTable ((name, ty) :: fields) x with (lookup name x)
-      _ | Nothing = Left $ ExpectedField name
+    processTable (MkFieldTy name optional ty :: fields) x with (lookup name x)
+      _ | Nothing = case optional of
+                         True => Right $ Nothing :: !(processTable fields x)
+                         False => Left $ ExpectedField name
       _ | Just val = do
               val' <- bimap (FieldError name) id $ processValue ty val
               fields' <- processTable fields (delete name x)
-              Right (val' :: fields')
+              let val'' = case optional of
+                               True => Just val'
+                               False => val'
+              Right (val'' :: fields')
 
     public export
     processValue : (ty : ValueTy) -> Value -> Either ValueError (ValueOf ty)
