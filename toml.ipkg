@@ -13,6 +13,7 @@ modules =
     Language.TOML.Lexer,
     Language.TOML.Tokens,
     Language.TOML.Value,
+    Language.TOML.Processing,
     Language.TOML
 
 sourcedir = "src"

@@ -10,11 +10,13 @@ import Tester.Runner
 import Parser
 import Lexer
 import Files
+import Process
 
 tests : List Test
 tests = Lexer.tests
      ++ Parser.tests
      ++ Files.tests
+     ++ Process.tests
 
 main : IO ()
 main = do

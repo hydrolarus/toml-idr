@@ -8,10 +8,6 @@ import Data.List.Quantifiers
 import Language.TOML.Value
 
 -- On Idris 0.5.2 release, remove this in favour of using Data.Singleton.
-public export
-data Singleton : a -> Type where
-     Val : (x : a) -> Singleton x
-
 mutual
     public export
     data ValueTy
@@ -39,7 +35,7 @@ mutual
 
     public export
     TableOf : TableTy -> Type
-    TableOf = All (\(name, ty) => (Singleton name, ValueOf ty))
+    TableOf = All (ValueOf . snd)
 
 
 mutual
@@ -67,7 +63,7 @@ mutual
       _ | Just val = do
               val' <- bimap (FieldError name) id $ processValue ty val
               fields' <- processTable fields (delete name x)
-              Right ((Val name, val') :: fields')
+              Right (val' :: fields')
 
     public export
     processValue : (ty : ValueTy) -> Value -> Either ValueError (ValueOf ty)
