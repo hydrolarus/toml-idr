@@ -4,8 +4,11 @@
 
 module Language.TOML.Processing
 
-import Data.List.Quantifiers
+import Data.List.Elem
+import Decidable.Equality
 import Language.TOML.Value
+
+infixr 2 `And`
 
 mutual
     public export
@@ -14,6 +17,7 @@ mutual
         | TInteger
         | TFloat
         | TBoolean
+        | TEnum (List String)
         | TArray ValueTy
         | TTable TableTy
 
@@ -25,17 +29,21 @@ mutual
         ty : ValueTy
 
     public export
-    TableTy : Type
-    TableTy = List FieldTy
+    data TableTy : Type where
+        Emp : TableTy
+        Ext : (ft : FieldTy) -> (FieldOf ft -> TableTy) -> TableTy
 
+    public export
+    And : FieldTy -> TableTy -> TableTy
+    And x y = Ext x (const y)
 
-mutual
     public export
     ValueOf : ValueTy -> Type
     ValueOf TString    = String
     ValueOf TInteger   = Integer
     ValueOf TFloat     = Double
     ValueOf TBoolean   = Bool
+    ValueOf (TEnum names) = (name ** Elem name names)
     ValueOf (TArray t) = List (ValueOf t)
     ValueOf (TTable x) = TableOf x
 
@@ -44,8 +52,9 @@ mutual
     FieldOf x = (if x.optional then Maybe else id) (ValueOf x.ty)
 
     public export
-    TableOf : TableTy -> Type
-    TableOf = All FieldOf
+    data TableOf : TableTy -> Type where
+        Nil : TableOf Emp
+        (::) : (x : FieldOf ft) -> TableOf (f x) -> TableOf (Ext ft f)
 
 
 mutual
@@ -54,6 +63,7 @@ mutual
         = ExpectedType ValueTy
         | InsideArray ValueError
         | InsideTable TableError
+        | BadEnumVal String
 
     public export
     data TableError
@@ -65,23 +75,26 @@ mutual
 mutual
     public export
     processTable : (ty : TableTy) -> Table -> Either TableError (TableOf ty)
-    processTable [] x with (keys x)
+    processTable Emp x with (keys x)
       _ | [] = Right []
       _ | ks = Left $ UnexpectedFields ks
-    processTable (MkFieldTy name optional ty :: fields) x with (lookup name x)
+    processTable (Ext (MkFieldTy name optional ty) fields) x with (lookup name x)
       _ | Nothing = case optional of
-                         True => Right $ Nothing :: !(processTable fields x)
+                         True => Right $ Nothing :: !(processTable (fields Nothing) x)
                          False => Left $ ExpectedField name
       _ | Just val = do
               val' <- bimap (FieldError name) id $ processValue ty val
-              fields' <- processTable fields (delete name x)
               let val'' = case optional of
                                True => Just val'
                                False => val'
+              fields' <- processTable (fields val'') (delete name x)
               Right (val'' :: fields')
 
     public export
     processValue : (ty : ValueTy) -> Value -> Either ValueError (ValueOf ty)
+    processValue (TEnum xs) (VString x) with (isElem x xs)
+      _ | Yes el = Right (x ** el)
+      _ | No nel = Left $ BadEnumVal x
     processValue TString    (VString x)  = Right x
     processValue TInteger   (VInteger x) = Right x
     processValue TFloat     (VFloat x)   = Right x
