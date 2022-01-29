@@ -7,7 +7,6 @@ module Language.TOML.Processing
 import Data.List.Quantifiers
 import Language.TOML.Value
 
--- On Idris 0.5.2 release, remove this in favour of using Data.Singleton.
 mutual
     public export
     data ValueTy
