@@ -90,7 +90,6 @@ basicDependent = test "process table dependent layout" $ assert $ check result
         check (Right (True :: lang :: [])) = lang == "idris"
         check (Right (False :: tbl)) = False
 
-
 basicEnum : Test
 basicEnum = test "process enum" $ assert $ check result
     where
@@ -107,6 +106,7 @@ basicEnum = test "process enum" $ assert $ check result
         check (Left x) = False
         check (Right ("idris" ** _)) = True
         check (Right (_ ** _)) = False
+
 
 export
 tests : List Test
