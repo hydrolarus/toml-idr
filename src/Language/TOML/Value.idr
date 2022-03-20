@@ -67,3 +67,17 @@ Show Value where
                             show k ++ " = " ++ assert_total show v
                         )
         ++ "}"
+
+export
+[Raw] Show Value where
+    show (VString x) = "string \{show x}"
+    show (VInteger x) = "integer \{show x}"
+    show (VFloat x) = "float \{show x}"
+    show (VBoolean x) = if x then "bool true" else "bool false"
+    show (VArray xs) = "list [\{concat $ intersperse ", " $ map (assert_total show) xs}]"
+    show (VTable x) =
+        let kvs = SortedMap.toList x in
+            "{\{fastConcat (intersperse ", " . flip map kvs $ \(k, v) =>
+                            show k ++ " = " ++ assert_total show v
+                        )}}"
+
