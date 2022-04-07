@@ -5,6 +5,7 @@
 module Parser
 
 import Tester
+import Language.Reflection
 import Control.ANSI
 
 import Text.Lexer
@@ -15,6 +16,8 @@ import Language.TOML.Parser as P
 import Language.TOML.Lexer as L
 import Language.TOML.ConcreteSyntax
 import Language.TOML.Value
+
+%language ElabReflection
 
 parseToItems : String -> TestFunc (List Item)
 parseToItems src = do
@@ -112,29 +115,71 @@ namespace Abstract
 
     export
     tableSectionKv : Test
-    tableSectionKv = test "table section key-val" $ do
+    tableSectionKv = test "parse table section key-val" $ do
         table <- parse "[table-name]\nx = 12"
         assertEq (lookupNested ["table-name", "x"] table) (Just $ VInteger 12)
 
     export
     tableSectionNestedKv : Test
-    tableSectionNestedKv = test "table section nested key-val" $ do
+    tableSectionNestedKv = test "parse table section nested key-val" $ do
         table <- parse "[table-name]\nx.y = 12"
         assertEq (lookupNested ["table-name", "x", "y"] table) (Just $ VInteger 12)
 
     export
     inlineTable : Test
-    inlineTable = test "inline table" $ do
+    inlineTable = test "parse inline table" $ do
         table <- parse "test = { x = 12, y = 21 }"
         assertEq (lookupNested ["test", "x"] table) (Just $ VInteger 12)
     
     export
     array : Test
-    array = test "array" $ do
+    array = test "parse array" $ do
         table <- parse "x = [1, 3, 7]"
-        assertEq (lookup "x" table) (Just $ VArray [VInteger 1, VInteger 3, VInteger 7])
+        assertEq {loc = here `(())} (lookup "x" table) (Just $ VArray [VInteger 1, VInteger 3, VInteger 7])
 
+    export
+    integers : Test
+    integers = test "parsing integers" $ do
+        integers <- parse "x = [2, 42, -78, +47, 0x123, 0x1005, 0o55, 0o006, 0b11011]"
+        assertEq {loc = here `(())}
+            (lookup "x" integers)
+            (Just $ VArray (map VInteger [2, 42, -78, 47, 0x123, 0x1005, 0o55, 0o6, 0b11011]))
 
+    export
+    floats : Test
+    floats = test "parsing floats" $ do
+        floats <- parse "x = [0.0, 0.1, 1.0, 42.84, 5e4, 2.12e3]"
+        assertEq {loc = here `(())}
+            (lookup "x" floats)
+            (Just $ VArray $ map VFloat [0.0, 0.1, 1.0, 42.84, 50000, 2120])
+
+    nan : Double
+    nan = sqrt (-1)
+
+    inf : Double
+    inf = 1.0 / 0.0
+
+    export
+    specialFloats : Test
+    specialFloats = test "parsing special floats" $ do
+        nans <- parse "x = [nan, +nan, -nan]"
+        infs <- parse "x = [inf, +inf, -inf]"
+        assertEq {loc = here `(())}
+            (lookup "x" infs)
+            (Just $ VArray $ map VFloat [inf, inf, -inf])
+        case lookup "x" nans of
+            Just (VArray nans) => assert $ all isNan nans
+            _ => throw "not an array"
+      where
+        isNan : Value -> Bool
+        isNan (VFloat x) = x /= x
+        isNan _ = False
+
+    export
+    strings : Test
+    strings = test "parsing strings" $ do
+        hello_world <- parse #"x = "hello world""#
+        assertEq {loc = here `(())} (lookup "x" hello_world) (Just $ VString "hello world")
 
 public export
 tests : List Test
@@ -155,5 +200,9 @@ tests = [
     Abstract.tableSectionKv,
     Abstract.tableSectionNestedKv,
     Abstract.inlineTable,
-    Abstract.array
+    Abstract.array,
+    Abstract.integers,
+    Abstract.floats,
+    Abstract.specialFloats,
+    Abstract.strings
 ]

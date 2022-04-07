@@ -10,8 +10,26 @@ import Language.TOML.Tokens
 import Text.Parser
 import Text.Token
 
+import Data.Bool
 import Data.List
 import Data.List1
+
+-- this code does need to be repeated
+-- each clause has differentl laziness
+private
+fromEither : {c : _} -> Grammar state token c (Either String a) -> Grammar state token c a
+fromEither {c = False} act = do
+    xb <- bounds act
+    the (Grammar _ _ False a) $
+        case xb.val of
+            Right x => pure x
+            Left err => failLoc xb.bounds err
+fromEither {c = True} act = do
+    xb <- bounds act
+    the (Grammar _ _ False a) $
+        case xb.val of
+            Right x => pure x
+            Left err => failLoc xb.bounds err
 
 private
 punct : Punctuation -> Grammar state TOMLToken True ()
@@ -31,21 +49,9 @@ private
 allowNewlines : (p : Grammar state TOMLToken True a) -> Grammar state TOMLToken True a
 allowNewlines p = maybeNewlines *> p <* maybeNewlines
 
-
-private
-unescape : List Char -> List Char
-unescape ('"'::rest) = loop rest
-    where
-        loop : List Char -> List Char
-        loop [] = []
-        loop ('"'::_) = []
-        loop ('\\'::'"'::rest) = '"' :: loop rest
-        loop (x::rest) = x :: loop rest
-unescape _ = []
-
 private
 string : Grammar state TOMLToken True CValue
-string = map (CVString . pack . unescape . unpack) $ match TTString
+string = CVString <$> fromEither (terminal "string" getString)
 
 private
 boolean : Grammar state TOMLToken True CValue
@@ -74,7 +80,7 @@ key = do
     where
         keyAtom : Grammar state TOMLToken True CKeyAtom
         keyAtom = map CKBare bare
-              <|> (map CKQuoted $ match TTString)
+              <|> (map CKQuoted $ fromEither $ terminal "string key" getKeyString)
 
 mutual
     private

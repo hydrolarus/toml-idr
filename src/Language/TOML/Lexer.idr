@@ -11,21 +11,40 @@ import public Language.TOML.Tokens
 
 %default total
 
--- TODO this is a valid JSON number, not a TOML float.
--- it's close enough but not correct.
+private
+nonZeroDigit : Lexer
+nonZeroDigit = range '1' '9'
+
 private
 floatLit : Lexer
 floatLit
-  = let sign  = is '-'
-        whole = is '0' <|> range '1' '9' <+> many digit
-        frac  = is '.' <+> digits
-        exp   = like 'e' <+> opt (oneOf "+-") <+> digits in
-        opt sign <+> whole <+> opt frac <+> opt exp
+  = let sign     = oneOf "+-"
+        whole    = is '0' <|> nonZeroDigit <+> many (opt (is '_') <+> digit)
+        frac     = the Lexer $ is '.' <+> digit <+> many (opt (is '_') <+> digit)
+        exp      = the Lexer $ like 'e' <+> opt (oneOf "+-") <+> digits
+        constant = exact "nan" <|> exact "inf" in
+        opt sign <+> (
+            whole <+> ((frac <+> opt exp) <|> exp)
+            <|> constant)
 
--- TODO doesn't handle prefix `+` yet or inline `_`
+private
+sepIntLit : Lexer
+sepIntLit = opt (oneOf "+-") <+> nonZeroDigit <+> many (is '_' <|> digit)
+
+private
+sepBaseLit : (pre : String) -> (digit : Lexer) -> Lexer
+sepBaseLit pre digit =
+    exact pre
+    <+> digit
+    <+> many (opt (is '_') <+> digit)
+
 private
 integerLit : Lexer
-integerLit = intLit <|> hexLit
+integerLit =
+    (sepBaseLit "0x" hexDigit
+    <|> sepBaseLit "0o" octDigit
+    <|> sepBaseLit "0b" binDigit
+    <|> sepIntLit) <+> reject (oneOf ".eE")
 
 private
 bareKey : Lexer
@@ -33,8 +52,8 @@ bareKey = some (alphaNum <|> is '_' <|> is '-')
 
 -- TODO doesn't handle single quoted strings or escapes yet
 private
-stringLit : Lexer
-stringLit = Text.Lexer.stringLit
+basicStringLit : Lexer
+basicStringLit = quote (is '"') (escape (is '\\') any <|> isNot '\\')
 
 private
 tomlTokenMap : TokenMap TOMLToken
@@ -53,7 +72,8 @@ tomlTokenMap = toTokenMap $
         (exact strTrue <|> exact strFalse, TTBoolean),
         (integerLit, TTInt),
         (floatLit, TTFloat),
-        (Language.TOML.Lexer.stringLit, TTString), -- TODO doesn't handle all escapes
+        -- TODO: other string types
+        (Language.TOML.Lexer.basicStringLit, TTString Basic),
         (bareKey, TTBare)
     ]
 

@@ -13,10 +13,28 @@ import Language.TOML.Tokens
 
 tokenize : Test
 tokenize = test "tokenize" $ do
-    Just res <- pure $ lexTOML "hello world\n"
+    let Just res = lexTOML "hello world\n"
         | Nothing => throwE "lexer error"
     assertEq (length res) 4
 
+integerLiteral : Test
+integerLiteral = test "lex integer literals" $ do
+    let Just res = lexTOML "12345 12_345 0x12345 0x12_345"
+        | Nothing => throwE "lexer error"
+    assertEq (length res) 7
+
+floatLiteral : Test
+floatLiteral = test "lex float literals" $ do
+    let Just res = lexTOML "5.0 0.55 0.0 -7.8e7 nan +nan -inf +inf"
+        | Nothing => throwE "lexer error"
+    assertEq (length res) 15
+
+stringLiteral : Test
+stringLiteral = test "lex string literals" $ do
+    let Just res = lexTOML #""hello world""#
+        | Nothing => throwE "lexer error"
+    assertEq (length res) 1
+
 export
 tests : List Test
-tests = [tokenize]
+tests = [tokenize, integerLiteral, floatLiteral, stringLiteral]
