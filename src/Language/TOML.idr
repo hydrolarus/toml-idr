@@ -38,7 +38,7 @@ sections xs = loop SGlobal xs
                 kvs = flip mapMaybe kvs' $ \x => case x of
                                         IKeyValue k v => Just (k, v)
                                         _ => Nothing
-                
+
             in (sec, kvs) :: loop sec rest
 
 
@@ -56,7 +56,6 @@ Show Error where
     show (ParseError x) = "Parse error: " ++ show x
     show Unimplemented = "Unimplemented feature"
 
-
 private
 keyAtomStr : CKeyAtom -> Key
 keyAtomStr (CKBare x) = x
@@ -67,6 +66,13 @@ keyParts : CKey -> List1 Key
 keyParts (CKAtom x) = keyAtomStr x ::: []
 keyParts (CKDotted x) = map keyAtomStr x
 
+public export
+Eq CKeyAtom where
+    x == y = keyAtomStr x == keyAtomStr y
+
+public export
+Eq CKey where
+    x == y = keyParts x == keyParts y
 
 private
 tableSetWithParts : (t : Table) -> (path : List1 Key) -> (val : Value) -> Either Error Table
@@ -103,7 +109,6 @@ mutual
                 let parts = keyParts k
                 t' <- tableSetWithParts t parts v'
                 loop t' xs
-    
 
 private
 extendFile : (file : Table) -> (sects : List (SectionIdent, List (CKey, CValue))) -> Either Error Table
@@ -117,8 +122,15 @@ extendFile file (((STable key), kvs) :: rest) = do
     file' <- tableSetWithParts file kParts (VTable tab)
     extendFile file' rest
 
-extendFile file (((STableArray x), kvs) :: rest) = Left Unimplemented
-
+extendFile file rest@(((STableArray key), kvs) :: _) = do
+    let (array, rest') = partition
+            (\(sect, _) => case sect of
+                (STableArray key') => key == key'
+                _ => False)
+            rest
+    array' <- traverse (map VTable . tableFromKVs) (map snd array)
+    file' <- tableSetWithParts file (keyParts key) (VArray array')
+    extendFile file' rest'
 
 export
 parseTOML : (src : String) -> Either Error Table

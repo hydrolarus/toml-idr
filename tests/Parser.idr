@@ -181,6 +181,30 @@ namespace Abstract
         hello_world <- parse #"x = "hello world""#
         assertEq {loc = here `(())} (lookup "x" hello_world) (Just $ VString "hello world")
 
+    export
+    tableArray : Test
+    tableArray = test "parsing table arrays" $ do
+        array <- parse """
+            [[depends]]
+            name = "toml"
+            version = "1.2"
+
+            [[depends]]
+            name = "hashable"
+            version = "9.7"
+            """
+
+        case lookup "depends" array of
+            Just (VArray [VTable toml, VTable hashable]) => do
+                let loc = here `(())
+                assertEq {loc} (lookup "name" toml) (Just $ VString "toml")
+                assertEq {loc} (lookup "name" hashable) (Just $ VString "hashable")
+                assertEq {loc} (lookup "version" toml) (Just $ VString "1.2")
+                assertEq {loc} (lookup "version" hashable) (Just $ VString "9.7")
+            Just (VArray xs) => throw "expected array of 2 tables, got: \{show xs}"
+            Just val => throw "expected array, got: \{show val}"
+            Nothing => throw "missing 'depends'"
+
 public export
 tests : List Test
 tests = [
@@ -204,5 +228,6 @@ tests = [
     Abstract.integers,
     Abstract.floats,
     Abstract.specialFloats,
-    Abstract.strings
+    Abstract.strings,
+    Abstract.tableArray
 ]
