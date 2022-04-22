@@ -232,13 +232,20 @@ unescapeBasic : List Char -> Either String (List Char)
 unescapeBasic ('"'::rest) = loop rest
     where
         -- hex digit to int
-        hexToInt : Char -> Int
+        hexToInt : Char -> Either String Int
         hexToInt c =
-            if '0' <= c && c <= '9'
-                then ord c - ord '0'
-                else ord (toLower c) - ord 'a'
+            if isHexDigit c
+                then Right $
+                    if '0' <= c && c <= '9'
+                        then ord c - ord '0'
+                        else ord (toLower c) - ord 'a'
+                else Left "invalid hex character: '\{cast {to=String} c}'"
 
-        unicodeEscape : List Char -> Int
+        unicodeEscape : List Char -> (acc : Int) -> Either String Char
+        unicodeEscape [] acc = pure $ chr acc
+        unicodeEscape (c::cs) acc = do
+            x <- hexToInt c
+            unicodeEscape cs (acc * 16 + x)
 
         loop : List Char -> Either String (List Char)
         loop [] = Left "unexpected end of input"
@@ -250,10 +257,12 @@ unescapeBasic ('"'::rest) = loop rest
         loop ('\\'::'r'::rest) = ('\r' ::) <$> loop rest
         loop ('\\'::'"'::rest) = ('"' ::) <$> loop rest
         loop ('\\'::'\\'::rest) = ('\\' ::) <$> loop rest
-        loop ('\\'::'u'::u0::u1::u2::u3::rest) =
-            (chr (unicodeEscape [u0, u1, u2, u3]) ::) <$> loop rest
-        loop ('\\'::'U'::u0::u1::u2::u3::u4::u5::u6::u7::rest) =
-            (chr (unicodeEscape [u0, u1, u2, u3, u4, u5, u6, u7]) ::) <$> loop rest
+        loop ('\\'::'u'::u0::u1::u2::u3::rest) = do
+            c <- unicodeEscape [u0, u1, u2, u3] 0
+            (c ::) <$> loop rest
+        loop ('\\'::'U'::u0::u1::u2::u3::u4::u5::u6::u7::rest) = do
+            c <- unicodeEscape [u0, u1, u2, u3, u4, u5, u6, u7] 0
+            (c ::) <$> loop rest
         loop ('\\'::_) = Left "invalid escape code"
         loop (x::rest) = (x ::) <$> loop rest
 unescapeBasic _ = Left "expected quote"
