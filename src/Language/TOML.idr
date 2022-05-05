@@ -23,6 +23,18 @@ data SectionIdent = SGlobal
                   | STable CKey
                   | STableArray CKey
 
+toPair : Item -> Maybe (CKey,CValue)
+toPair (IKeyValue key val) = Just (key,val)
+toPair (ITableHeader _)    = Nothing
+toPair (ITableArray _)     = Nothing
+
+takeWhileJust : (a -> Maybe b) -> List a -> (List b, List a)
+takeWhileJust f [] = ([],[])
+takeWhileJust f (x :: xs) = case f x of
+  Nothing => ([],x :: xs)
+  Just vb => let (bs,as) = takeWhileJust f xs in (vb :: bs, as)
+
+
 private
 sections : List C.Item -> List (SectionIdent, List (CKey, CValue))
 sections xs = loop SGlobal xs
@@ -32,14 +44,8 @@ sections xs = loop SGlobal xs
         loop sec ((ITableHeader header) :: xs) = loop (STable header) xs
         loop sec ((ITableArray header) :: xs) = loop (STableArray header) xs
         loop sec xs =
-            let (kvs', rest) = flip break xs $ \x => case x of
-                                        IKeyValue k v => False
-                                        _ => True
-                kvs = flip mapMaybe kvs' $ \x => case x of
-                                        IKeyValue k v => Just (k, v)
-                                        _ => Nothing
-
-            in (sec, kvs) :: loop sec rest
+            let (kvs, rest) = takeWhileJust toPair xs
+             in (sec, kvs) :: loop sec rest
 
 
 public export
