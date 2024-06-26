@@ -8,7 +8,7 @@ import Data.List.Elem
 import Decidable.Equality
 import Language.TOML.Value
 
-infixr 2 `And`
+export infixr 2 `And`
 
 mutual
     public export
